@@ -1,15 +1,46 @@
 import { toNextJsHandler } from "better-auth/next-js";
-import { getBetterAuth, authIsConfigured } from "@/lib/auth/server";
+import { getBetterAuth, authIsConfigured, authConfigurationStatus } from "@/lib/auth/server";
+
+function safeErrorDetails(error: unknown) {
+  if (!(error instanceof Error)) return { errorName: "UnknownError" };
+  return {
+    errorName: error.name,
+    errorMessage: error.message.replace(/postgres(?:ql)?:\/\/\S+/gi, "[database URL redacted]"),
+  };
+}
 
 async function handle(request: Request) {
   if (!authIsConfigured()) {
-    return Response.json({ error: "Better Auth is not configured on this deployment." }, { status: 503 });
+    const configuration = authConfigurationStatus();
+    console.error("[ReadFlow auth] Required server configuration is missing.", configuration);
+    return Response.json(
+      { message: "Better Auth is not configured on this deployment.", code: "AUTH_NOT_CONFIGURED" },
+      { status: 503 },
+    );
   }
   try {
     const handlers = toNextJsHandler(getBetterAuth());
-    return request.method === "GET" ? handlers.GET(request) : handlers.POST(request);
-  } catch {
-    return Response.json({ error: "Authentication is temporarily unavailable." }, { status: 503 });
+    const response = await (request.method === "GET" ? handlers.GET(request) : handlers.POST(request));
+    if (response.status >= 500) {
+      console.error("[ReadFlow auth] Auth handler returned a server error.", {
+        method: request.method,
+        path: new URL(request.url).pathname,
+        status: response.status,
+        ...authConfigurationStatus(),
+      });
+    }
+    return response;
+  } catch (error) {
+    console.error("[ReadFlow auth] Auth handler threw an error.", {
+      method: request.method,
+      path: new URL(request.url).pathname,
+      ...authConfigurationStatus(),
+      ...safeErrorDetails(error),
+    });
+    return Response.json(
+      { message: "Authentication is temporarily unavailable.", code: "AUTH_UNAVAILABLE" },
+      { status: 503 },
+    );
   }
 }
 

@@ -55,8 +55,18 @@ type BetterAuthInstance = ReturnType<typeof createBetterAuth>;
 let auth: BetterAuthInstance | undefined;
 
 export function authIsConfigured() {
-  const { databaseUrl, secret } = getAuthSettings();
-  return Boolean(databaseUrl && secret && secret.length >= 32);
+  const status = authConfigurationStatus();
+  return status.databaseUrlConfigured && status.authSecretConfigured;
+}
+
+export function authConfigurationStatus() {
+  const { databaseUrl, secret, googleClientId, googleClientSecret } = getAuthSettings();
+  return {
+    databaseUrlConfigured: Boolean(databaseUrl),
+    authSecretConfigured: Boolean(secret && secret.length >= 32),
+    googleClientIdConfigured: Boolean(googleClientId),
+    googleClientSecretConfigured: Boolean(googleClientSecret),
+  };
 }
 
 export function getBetterAuth(): BetterAuthInstance {
