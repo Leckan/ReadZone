@@ -49,6 +49,7 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAppAuth } from "@/components/auth-boundary";
 import { importBook } from "@/lib/import-book";
 import { splitSentences, estimatedDuration, formatDuration } from "@/lib/sentences";
@@ -176,6 +177,7 @@ function StatCard({ icon, label, value, note, tone }: { icon: ReactNode; label: 
 
 function ReadflowApp() {
   const auth = useAppAuth();
+  const router = useRouter();
   const cloudEnabled = auth.enabled && REMOTE_STORAGE_ENABLED;
   const [books, setBooks] = useState<BookRecord[]>([]);
   const booksRef = useRef<BookRecord[]>([]);
@@ -210,6 +212,16 @@ function ReadflowApp() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cloudSyncTimers = useRef<Map<string, number>>(new Map());
+
+  async function handleSignOut() {
+    try {
+      await auth.signOut();
+      router.replace("/");
+      router.refresh();
+    } catch {
+      setToast("Couldn’t sign out. Check your connection and authentication settings.");
+    }
+  }
 
   useEffect(() => {
     booksRef.current = books;
@@ -811,7 +823,7 @@ function ReadflowApp() {
             {page === "library" && <label className="global-search"><Search size={16} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search your library" aria-label="Search your library" /><kbd>⌘ K</kbd></label>}
             <button className="topbar-help" onClick={() => setToast("Import a PDF or EPUB to get started. Your files stay on this device.")}><CircleHelp size={17} /><span>Help</span></button>
             {auth.enabled && (auth.user
-              ? <button className="button button-light button-small" onClick={() => { void auth.signOut(); }}><LogOut size={14} />Sign out</button>
+              ? <button className="button button-light button-small" onClick={() => { void handleSignOut(); }}><LogOut size={14} />Sign out</button>
               : <Link className="button button-light button-small" href="/auth/sign-in"><LogIn size={14} />Sign in</Link>)}
             <button className="button button-primary button-small" onClick={() => setImportOpen(true)}><Upload size={15} />Add a book</button>
           </div>
@@ -927,7 +939,7 @@ function ReadflowApp() {
             <div className="settings-view">
               <div className="page-heading-row"><div><div className="eyebrow"><span className="eyebrow-dot" /> MAKE IT YOURS</div><h1>Preferences<span className="heading-period">.</span></h1><p>A reading space that feels right to you.</p></div></div>
               <div className="settings-grid">
-                <section className="settings-card settings-wide"><div className="settings-card-title"><span className="settings-icon settings-violet"><LogIn size={17} /></span><div><h2>ReadFlow account</h2><p>{auth.enabled ? "Sign in to access your private library across devices." : "Account access can be enabled with the Neon settings in the README."}</p></div></div>{auth.user ? <div className="storage-summary"><div><b>{auth.user.name}</b><small>{auth.user.email}</small></div><button className="button button-light" onClick={() => { void auth.signOut(); }}><LogOut size={15} />Sign out</button></div> : auth.enabled ? <div className="storage-summary"><div><b>Not signed in</b><small>{cloudEnabled ? "Your cloud library will appear after sign-in." : "Cloud storage still needs server configuration."}</small></div><Link className="button button-primary" href="/auth/sign-in"><LogIn size={15} />Sign in</Link></div> : <div className="storage-summary"><div><b>Local mode</b><small>Your library remains on this device until account access is configured.</small></div></div>}</section>
+                <section className="settings-card settings-wide"><div className="settings-card-title"><span className="settings-icon settings-violet"><LogIn size={17} /></span><div><h2>ReadFlow account</h2><p>{auth.enabled ? "Sign in to access your private library across devices." : "Account access can be enabled with the Neon settings in the README."}</p></div></div>{auth.user ? <div className="storage-summary"><div><b>{auth.user.name}</b><small>{auth.user.email}</small></div><button className="button button-light" onClick={() => { void handleSignOut(); }}><LogOut size={15} />Sign out</button></div> : auth.enabled ? <div className="storage-summary"><div><b>Not signed in</b><small>{cloudEnabled ? "Your cloud library will appear after sign-in." : "Cloud storage still needs server configuration."}</small></div><Link className="button button-primary" href="/auth/sign-in"><LogIn size={15} />Sign in</Link></div> : <div className="storage-summary"><div><b>Local mode</b><small>Your library remains on this device until account access is configured.</small></div></div>}</section>
                 <section className="settings-card"><div className="settings-card-title"><span className="settings-icon settings-violet"><Volume2 size={17} /></span><div><h2>Narration</h2><p>Set the voice and pace for reading aloud.</p></div></div><label className="setting-field"><span>Voice</span><select value={preferences.voiceURI} onChange={(event) => changePreference("voiceURI", event.target.value)}><option value="">System default</option>{voices.map((voice) => <option key={voice.voiceURI} value={voice.voiceURI}>{voice.name} · {voice.lang}</option>)}</select><small>Uses voices available in your browser.</small></label><label className="setting-field"><span>Reading speed <b>{preferences.speed.toFixed(2).replace(/0+$/, "").replace(/\.$/, "")}×</b></span><input type="range" min="0.5" max="3" step="0.25" value={preferences.speed} onChange={(event) => changePreference("speed", Number(event.target.value))} /><div className="range-labels"><span>Slower</span><span>Faster</span></div></label><label className="setting-field"><span>Volume <b>{Math.round(preferences.volume * 100)}%</b></span><input type="range" min="0" max="1" step="0.05" value={preferences.volume} onChange={(event) => changePreference("volume", Number(event.target.value))} /></label></section>
                 <section className="settings-card"><div className="settings-card-title"><span className="settings-icon settings-blue"><BookOpen size={17} /></span><div><h2>Reading comfort</h2><p>Adjust the page to suit your eyes.</p></div></div><label className="setting-field"><span>Text size <b>{preferences.fontSize}px</b></span><input type="range" min="15" max="25" step="1" value={preferences.fontSize} onChange={(event) => changePreference("fontSize", Number(event.target.value))} /></label><label className="setting-field"><span>Line spacing <b>{preferences.lineHeight.toFixed(2)}×</b></span><input type="range" min="1.45" max="2.15" step="0.05" value={preferences.lineHeight} onChange={(event) => changePreference("lineHeight", Number(event.target.value))} /></label><div className="setting-field"><span>Appearance</span><div className="appearance-choices"><button className={preferences.theme === "light" ? "appearance-active" : ""} onClick={() => changePreference("theme", "light")}><Sun size={16} />Light</button><button className={preferences.theme === "dark" ? "appearance-active" : ""} onClick={() => changePreference("theme", "dark")}><Moon size={16} />Dark</button></div></div><label className="setting-toggle"><span><b>High contrast</b><small>Increase text and control contrast.</small></span><input type="checkbox" checked={preferences.highContrast} onChange={(event) => changePreference("highContrast", event.target.checked)} /><span className="toggle-track" /></label></section>
                 <section className="settings-card settings-wide"><div className="settings-card-title"><span className="settings-icon settings-green"><LibraryBig size={17} /></span><div><h2>Your data</h2><p>Books are kept in this browser for offline reading{cloudEnabled ? " and synced to your private account when signed in." : "."}</p></div></div><div className="storage-summary"><div><b>{visibleBooks.length} {visibleBooks.length === 1 ? "book" : "books"}</b><small>Stored on this device</small></div><button className="button button-light danger-button" onClick={() => { if (window.confirm("Clear every local book and reading cache from this browser? Cloud copies in your account will remain.")) { const remoteMetadata = visibleBooks.filter((book) => book.remoteStored).map((book) => ({ ...book, chapters: [] })); void Promise.all(visibleBooks.map((book) => removeBook(book.id))).then(() => { booksRef.current = remoteMetadata; setBooks(remoteMetadata); stopNarration(); setActiveBookId(null); setPage("dashboard"); setToast("Local library cleared. Cloud books remain in your account."); }); } }}><Trash2 size={15} />Clear local library</button></div><div className="settings-footnote"><span>✳</span> Original files are not retained after text extraction. Removing a book deletes its text, notes, bookmarks, and progress from this browser.</div></section>

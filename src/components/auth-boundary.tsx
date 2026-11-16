@@ -23,7 +23,10 @@ function ConnectedAuth({ children }: { children: ReactNode }) {
     enabled: true,
     loading: isPending,
     user,
-    signOut: async () => { await authClient.signOut(); },
+    signOut: async () => {
+      const result = await authClient.signOut();
+      if (result.error) throw new Error(result.error.message || "Sign-out failed.");
+    },
   };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
