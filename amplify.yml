@@ -1,0 +1,18 @@
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - npm ci
+    build:
+      commands:
+        - 'env | grep -E "^(NEON_AUTH_BASE_URL|READFLOW_STORAGE_ENDPOINT|READFLOW_STORAGE_REGION|READFLOW_STORAGE_BUCKET|NEXT_PUBLIC_NEON_AUTH_ENABLED|NEXT_PUBLIC_READFLOW_REMOTE_STORAGE_ENABLED)=" > .env.production || true'
+        - npm run build
+  artifacts:
+    baseDirectory: .next
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - node_modules/**/*
+      - .next/cache/**/*
