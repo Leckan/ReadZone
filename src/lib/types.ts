@@ -40,6 +40,10 @@ export type BookRecord = {
   listenedSeconds: number;
   favorite: boolean;
   bookmarks: Bookmark[];
+  /** True when this book has been copied to the signed-in user's private cloud library. */
+  remoteStored?: boolean;
+  /** Auth user that owns the remote copy; prevents showing another account's local cache. */
+  remoteOwnerId?: string;
 };
 
 export type AppPreferences = {
