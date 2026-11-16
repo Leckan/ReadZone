@@ -1,6 +1,7 @@
 import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { neon, type NeonQueryFunction } from "@neondatabase/serverless";
 import { getCurrentUser } from "@/lib/auth/server";
+import { getServerEnvironmentValue } from "@/lib/server/environment";
 import type { BookRecord } from "@/lib/types";
 
 const MAX_REMOTE_BOOK_BYTES = 4 * 1024 * 1024;
@@ -9,13 +10,13 @@ let database: NeonQueryFunction<false, false> | undefined;
 
 export function isRemoteStorageConfigured() {
   return Boolean(
-    process.env.DATABASE_URL && process.env.READFLOW_STORAGE_ENDPOINT && process.env.READFLOW_STORAGE_REGION &&
-    process.env.READFLOW_STORAGE_ACCESS_KEY_ID && process.env.READFLOW_STORAGE_SECRET_ACCESS_KEY && process.env.READFLOW_STORAGE_BUCKET,
+    getServerEnvironmentValue("DATABASE_URL") && getServerEnvironmentValue("READFLOW_STORAGE_ENDPOINT") && getServerEnvironmentValue("READFLOW_STORAGE_REGION") &&
+    getServerEnvironmentValue("READFLOW_STORAGE_ACCESS_KEY_ID") && getServerEnvironmentValue("READFLOW_STORAGE_SECRET_ACCESS_KEY") && getServerEnvironmentValue("READFLOW_STORAGE_BUCKET"),
   );
 }
 
 function getDatabase() {
-  const url = process.env.DATABASE_URL;
+  const url = getServerEnvironmentValue("DATABASE_URL");
   if (!url) throw new Error("Remote database is not configured.");
   if (!database) database = neon(url);
   return database;
@@ -23,10 +24,10 @@ function getDatabase() {
 
 function getStorage() {
   if (!storageClient) {
-    const endpoint = process.env.READFLOW_STORAGE_ENDPOINT;
-    const region = process.env.READFLOW_STORAGE_REGION;
-    const accessKeyId = process.env.READFLOW_STORAGE_ACCESS_KEY_ID;
-    const secretAccessKey = process.env.READFLOW_STORAGE_SECRET_ACCESS_KEY;
+    const endpoint = getServerEnvironmentValue("READFLOW_STORAGE_ENDPOINT");
+    const region = getServerEnvironmentValue("READFLOW_STORAGE_REGION");
+    const accessKeyId = getServerEnvironmentValue("READFLOW_STORAGE_ACCESS_KEY_ID");
+    const secretAccessKey = getServerEnvironmentValue("READFLOW_STORAGE_SECRET_ACCESS_KEY");
     if (!endpoint || !region || !accessKeyId || !secretAccessKey) throw new Error("Remote object storage is not configured.");
     storageClient = new S3Client({
       endpoint,
@@ -39,7 +40,7 @@ function getStorage() {
 }
 
 function getBucket() {
-  const bucket = process.env.READFLOW_STORAGE_BUCKET;
+  const bucket = getServerEnvironmentValue("READFLOW_STORAGE_BUCKET");
   if (!bucket) throw new Error("Remote object storage bucket is not configured.");
   return bucket;
 }

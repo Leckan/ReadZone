@@ -1,14 +1,16 @@
 import { createNeonAuth } from "@neondatabase/auth/next/server";
+import { getServerEnvironmentValue } from "@/lib/server/environment";
 
 let neonAuth: ReturnType<typeof createNeonAuth> | undefined;
 
 export function authIsConfigured() {
-  return Boolean(process.env.NEON_AUTH_BASE_URL && process.env.NEON_AUTH_COOKIE_SECRET?.length && process.env.NEON_AUTH_COOKIE_SECRET.length >= 32);
+  const secret = getServerEnvironmentValue("NEON_AUTH_COOKIE_SECRET");
+  return Boolean(getServerEnvironmentValue("NEON_AUTH_BASE_URL") && secret && secret.length >= 32);
 }
 
 export function getNeonAuth() {
-  const baseUrl = process.env.NEON_AUTH_BASE_URL;
-  const secret = process.env.NEON_AUTH_COOKIE_SECRET;
+  const baseUrl = getServerEnvironmentValue("NEON_AUTH_BASE_URL");
+  const secret = getServerEnvironmentValue("NEON_AUTH_COOKIE_SECRET");
   if (!baseUrl || !secret || secret.length < 32) {
     throw new Error("Neon Auth is not configured. Set NEON_AUTH_BASE_URL and a 32-character NEON_AUTH_COOKIE_SECRET.");
   }

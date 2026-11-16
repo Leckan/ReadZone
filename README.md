@@ -65,7 +65,11 @@ The server environment variables are:
 | `NEXT_PUBLIC_NEON_AUTH_ENABLED` | Turns on the account UI and Neon Auth client. |
 | `NEXT_PUBLIC_READFLOW_REMOTE_STORAGE_ENABLED` | Turns on app sync and remote book endpoints. |
 
-Amplify reserves environment variable names beginning with `AWS`. Use the `READFLOW_STORAGE_*` names above there. Store secret values with Amplify's secret management for Gen 2 or Systems Manager Parameter Store for Gen 1, as described in [Amplify's environment variable guidance](https://docs.aws.amazon.com/amplify/latest/userguide/environment-variables.html).
+Amplify reserves environment variable names beginning with `AWS`. Use the `READFLOW_STORAGE_*` names above there. Store secret values with Amplify's secret management for Gen 2 or Systems Manager Parameter Store for Gen 1, as described in [Amplify's environment variable guidance](https://docs.aws.amazon.com/amplify/latest/userguide/environment-variables.html) and [environment secrets guide](https://docs.aws.amazon.com/amplify/latest/userguide/environment-secrets.html).
+
+For AWS Amplify Hosting, the repository includes `amplify.yml`. It makes the non-secret Neon Auth URL, storage location, and public feature switches available to Next.js SSR by writing only those values to `.env.production` before the build. Keep `NEON_AUTH_COOKIE_SECRET`, `DATABASE_URL`, and the storage access key and secret in Amplify's secret store; do not add them to `.env.production`. The server reads Gen 1 Hosting secrets from Amplify's `process.env.secrets` JSON and also accepts direct runtime environment variables.
+
+Configure the exact production Neon Auth trusted origin without a trailing slash, for example `https://readflow.thinkzone.tech`. Neon Auth's current Next.js SDK requires Next.js 16, while Amplify's published SSR support currently lists versions through 15. Confirm Next.js 16 SSR support for the Amplify app; otherwise the deployment host and auth adapter versions need to be aligned.
 
 Books and chapters are uploaded as one JSON object. Cloud uploads are currently limited to 4 MiB of extracted JSON per book to fit typical serverless request limits. Larger books remain fully available in the local library and can be uploaded after a future chunked-transfer implementation. The original PDF/EPUB is not uploaded or retained.
 
