@@ -33,7 +33,7 @@ The `predev`, `prebuild`, and `prestart` scripts copy PDF.js’s worker from `no
 
 1. Copy `.env.example` to `.env.local`. The Neon Auth and Object Storage endpoints are set to the selected ThinkZone project; keep all credentials server-side.
 2. In the ThinkZone project's `main` branch, create a **private** Neon Object Storage bucket named `readflow-books` in `us-east-2` if it is not already present. Buckets can be created in the Neon Console, CLI, or with the S3 `CreateBucket` API.
-3. Create a Neon S3 credential scoped to `storage:read` and `storage:write`. Put its access key and secret in `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` in `.env.local`.
+3. Create a Neon S3 credential scoped to `storage:read` and `storage:write`. Put its access key and secret in `READFLOW_STORAGE_ACCESS_KEY_ID` and `READFLOW_STORAGE_SECRET_ACCESS_KEY` in `.env.local`.
 4. Apply `db/migrations/0001_readflow_books.sql` to the `readflow` database using an owner/migration connection if it is not already applied. It adds only the `public.readflow_books` table and its owner/update index. Managed Auth is hosted separately, so `owner_id` stores the verified Auth UUID without a cross-database foreign key.
 5. Set `DATABASE_URL` to a server-only Postgres role that can read and write `public.readflow_books`. Avoid using a superuser/owner URL at runtime. For example, after applying the migration as the owner:
 
@@ -58,12 +58,14 @@ The server environment variables are:
 | `NEON_AUTH_BASE_URL` | Neon Managed Auth URL for ThinkZone. |
 | `NEON_AUTH_COOKIE_SECRET` | Secret used by the Next.js auth proxy to sign session cookies. |
 | `DATABASE_URL` | Restricted Postgres connection for ReadFlow book records. |
-| `AWS_ENDPOINT_URL_S3` | ThinkZone branch's Neon Object Storage S3 endpoint. |
-| `AWS_REGION` | `us-east-2` for the selected project. |
-| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | Scoped S3 credential for private object access. |
+| `READFLOW_STORAGE_ENDPOINT` | ThinkZone branch's Neon Object Storage S3 endpoint. |
+| `READFLOW_STORAGE_REGION` | `us-east-2` for the selected project. |
+| `READFLOW_STORAGE_ACCESS_KEY_ID` / `READFLOW_STORAGE_SECRET_ACCESS_KEY` | Scoped S3 credential for private object access. |
 | `READFLOW_STORAGE_BUCKET` | `readflow-books`. |
 | `NEXT_PUBLIC_NEON_AUTH_ENABLED` | Turns on the account UI and Neon Auth client. |
 | `NEXT_PUBLIC_READFLOW_REMOTE_STORAGE_ENABLED` | Turns on app sync and remote book endpoints. |
+
+Amplify reserves environment variable names beginning with `AWS`. Use the `READFLOW_STORAGE_*` names above there. Store secret values with Amplify's secret management for Gen 2 or Systems Manager Parameter Store for Gen 1, as described in [Amplify's environment variable guidance](https://docs.aws.amazon.com/amplify/latest/userguide/environment-variables.html).
 
 Books and chapters are uploaded as one JSON object. Cloud uploads are currently limited to 4 MiB of extracted JSON per book to fit typical serverless request limits. Larger books remain fully available in the local library and can be uploaded after a future chunked-transfer implementation. The original PDF/EPUB is not uploaded or retained.
 
