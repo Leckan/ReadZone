@@ -4,7 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, BookOpen, LoaderCircle } from "lucide-react";
-import { authClient, authEnabled } from "@/lib/auth/client";
+import { authClient, authEnabled, googleAuthEnabled } from "@/lib/auth/client";
 
 function AuthForm() {
   const router = useRouter();
@@ -58,8 +58,8 @@ function AuthForm() {
       <div className="eyebrow"><span className="eyebrow-dot" /> YOUR PERSONAL LIBRARY</div>
       <h1>{mode === "sign-up" ? "Create your account" : "Welcome back"}<span className="heading-period">.</span></h1>
       <p className="auth-intro">Sign in to keep your books, bookmarks, and reading progress with you.</p>
-      <button className="button button-light auth-google" onClick={() => void signInWithGoogle()} disabled={busy}>Continue with Google</button>
-      <div className="auth-divider"><span>or use email</span></div>
+      {googleAuthEnabled && <button className="button button-light auth-google" onClick={() => void signInWithGoogle()} disabled={busy}>Continue with Google</button>}
+      {googleAuthEnabled && <div className="auth-divider"><span>or use email</span></div>}
       <form onSubmit={submit} className="auth-form">
         {mode === "sign-up" && <label>Name<input autoComplete="name" value={name} onChange={(event) => setName(event.target.value)} required maxLength={100} /></label>}
         <label>Email<input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
@@ -78,7 +78,7 @@ export default function SignInPage() {
     <main className="auth-page">
       <div className="auth-page-top"><Link href="/" className="auth-back"><ArrowLeft size={15} />Back to ReadFlow</Link><span>ReadFlow <b>AI</b></span></div>
       {!authEnabled ? (
-        <section className="auth-card"><span className="auth-logo"><BookOpen size={20} /></span><h1>Account sign-in isn’t set up yet.</h1><p className="auth-intro">The local reading library is ready. Add the Neon Auth environment settings described in the README to turn on account access.</p><Link className="button button-primary auth-submit" href="/">Continue with local library</Link></section>
+        <section className="auth-card"><span className="auth-logo"><BookOpen size={20} /></span><h1>Account sign-in isn’t set up yet.</h1><p className="auth-intro">The local reading library is ready. Add the Better Auth settings described in the README to turn on account access.</p><Link className="button button-primary auth-submit" href="/">Continue with local library</Link></section>
       ) : <AuthForm />}
       <div className="auth-page-footer">A quieter place to keep reading.</div>
     </main>

@@ -1,15 +1,13 @@
-import { getNeonAuth, authIsConfigured } from "@/lib/auth/server";
+import { toNextJsHandler } from "better-auth/next-js";
+import { getBetterAuth, authIsConfigured } from "@/lib/auth/server";
 
-type AuthRouteContext = { params: Promise<{ path: string[] }> };
-
-async function handle(request: Request, context: AuthRouteContext) {
+async function handle(request: Request) {
   if (!authIsConfigured()) {
-    return Response.json({ error: "Neon Auth is not configured on this deployment." }, { status: 503 });
+    return Response.json({ error: "Better Auth is not configured on this deployment." }, { status: 503 });
   }
   try {
-    const handlers = getNeonAuth().handler();
-    const method = request.method as "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-    return handlers[method](request, context);
+    const handlers = toNextJsHandler(getBetterAuth());
+    return request.method === "GET" ? handlers.GET(request) : handlers.POST(request);
   } catch {
     return Response.json({ error: "Authentication is temporarily unavailable." }, { status: 503 });
   }
@@ -17,6 +15,3 @@ async function handle(request: Request, context: AuthRouteContext) {
 
 export const GET = handle;
 export const POST = handle;
-export const PUT = handle;
-export const PATCH = handle;
-export const DELETE = handle;
