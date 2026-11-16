@@ -1,25 +1,79 @@
-import { createNeonAuth } from "@neondatabase/auth/next/server";
+import { betterAuth } from "better-auth";
+import { nextCookies } from "better-auth/next-js";
+import { PostgresDialect } from "kysely";
+import { Pool } from "pg";
+import { headers } from "next/headers";
 import { getServerEnvironmentValue } from "@/lib/server/environment";
 
-let neonAuth: ReturnType<typeof createNeonAuth> | undefined;
+const allowedHosts = [
+  "localhost:3000",
+  "readflow.thinkzone.tech",
+  "readzone.vercel.app",
+];
 
-export function authIsConfigured() {
-  const secret = getServerEnvironmentValue("NEON_AUTH_COOKIE_SECRET");
-  return Boolean(getServerEnvironmentValue("NEON_AUTH_BASE_URL") && secret && secret.length >= 32);
+function getAuthSettings() {
+  return {
+    databaseUrl: getServerEnvironmentValue("BETTER_AUTH_DATABASE_URL"),
+    secret: getServerEnvironmentValue("BETTER_AUTH_SECRET"),
+    googleClientId: getServerEnvironmentValue("GOOGLE_CLIENT_ID"),
+    googleClientSecret: getServerEnvironmentValue("GOOGLE_CLIENT_SECRET"),
+  };
 }
 
-export function getNeonAuth() {
-  const baseUrl = getServerEnvironmentValue("NEON_AUTH_BASE_URL");
-  const secret = getServerEnvironmentValue("NEON_AUTH_COOKIE_SECRET");
-  if (!baseUrl || !secret || secret.length < 32) {
-    throw new Error("Neon Auth is not configured. Set NEON_AUTH_BASE_URL and a 32-character NEON_AUTH_COOKIE_SECRET.");
+function createBetterAuth(settings: ReturnType<typeof getAuthSettings>) {
+  const pool = new Pool({
+    connectionString: settings.databaseUrl,
+    max: 5,
+    idleTimeoutMillis: 20_000,
+    connectionTimeoutMillis: 10_000,
+    allowExitOnIdle: true,
+  });
+
+  return betterAuth({
+    appName: "ReadFlow",
+    baseURL: {
+      allowedHosts,
+      protocol: process.env.NODE_ENV === "development" ? "http" : "https",
+      fallback: "https://readflow.thinkzone.tech",
+    },
+    secret: settings.secret,
+    database: {
+      dialect: new PostgresDialect({ pool }),
+      type: "postgres" as const,
+      schemaName: "better_auth",
+    },
+    emailAndPassword: { enabled: true },
+    socialProviders: settings.googleClientId && settings.googleClientSecret
+      ? { google: { clientId: settings.googleClientId, clientSecret: settings.googleClientSecret } }
+      : {},
+    advanced: { database: { generateId: "uuid" } },
+    plugins: [nextCookies()],
+  });
+}
+
+type BetterAuthInstance = ReturnType<typeof createBetterAuth>;
+let auth: BetterAuthInstance | undefined;
+
+export function authIsConfigured() {
+  const { databaseUrl, secret } = getAuthSettings();
+  return Boolean(databaseUrl && secret && secret.length >= 32);
+}
+
+export function getBetterAuth(): BetterAuthInstance {
+  if (auth) return auth;
+
+  const settings = getAuthSettings();
+  const { databaseUrl, secret } = settings;
+  if (!databaseUrl || !secret || secret.length < 32) {
+    throw new Error("Better Auth needs BETTER_AUTH_DATABASE_URL and a BETTER_AUTH_SECRET with at least 32 characters.");
   }
-  if (!neonAuth) neonAuth = createNeonAuth({ baseUrl, cookies: { secret } });
-  return neonAuth;
+  const instance = createBetterAuth(settings);
+  auth = instance;
+  return instance;
 }
 
 export async function getCurrentUser() {
   if (!authIsConfigured()) return null;
-  const result = await getNeonAuth().getSession();
-  return result.data?.user ?? null;
+  const session = await getBetterAuth().api.getSession({ headers: await headers() });
+  return session?.user ?? null;
 }

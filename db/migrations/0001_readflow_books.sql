@@ -1,6 +1,6 @@
 -- Account-scoped ReadFlow library records. Extracted book chapters are stored
--- as private JSON objects in Neon Object Storage. Auth identities live in the
--- separate Managed Auth database, so owner_id is validated by the server API.
+-- as private JSON objects in Neon Object Storage. owner_id contains the UUID
+-- of the authenticated Better Auth user and is validated by the server API.
 CREATE TABLE IF NOT EXISTS public.readflow_books (
   id text NOT NULL,
   owner_id uuid NOT NULL,
